@@ -4,14 +4,14 @@ package gst
 /*
 #include <stdlib.h>
 #include <gst/gst.h>
+
+void gst_iterator_foreach_handler_dispatch(const GValue *item, gpointer user_data);
+
 */
 import "C"
 
 import (
-//"errors"
-//"github.com/lidouf/glib"
-//"time"
-//"unsafe"
+	"github.com/lidouf/glib"
 )
 
 type IteratorResult C.GstIteratorResult
@@ -32,3 +32,31 @@ const (
 )
 
 type Iterator C.GstIterator
+
+func (i *Iterator) Free() {
+	C.gst_iterator_free(i)
+}
+
+type IteratorCallbackFunction func(*glib.Value) bool
+
+func (i *Iterator) forEach(callback IteratorCallbackFunction) IteratorResult {
+
+	item := new(glib.Value)
+
+	for {
+		result := IteratorResult(C.gst_iterator_next(i, v2g(item)))
+		switch result {
+		case ITERATOR_OK:
+			if !callback(item) {
+				return result
+			}
+			break
+		case ITERATOR_RESYNC:
+			C.gst_iterator_resync(i)
+			break
+		case ITERATOR_ERROR:
+		case ITERATOR_DONE:
+			return result
+		}
+	}
+}
