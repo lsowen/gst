@@ -347,8 +347,25 @@ func (e *Element) TargetState() State {
 }
 
 //Get the pads of this elements.
-func (e *Element) GetPads() *glib.List {
-	return glib.WrapList(uintptr(unsafe.Pointer(e.g().pads)))
+func (e *Element) GetPads() []*Pad {
+	p := C.gst_element_iterate_pads(e.g())
+	if p == nil {
+		return nil
+	}
+	iterator := (*Iterator)(unsafe.Pointer(p))
+	defer iterator.Free()
+
+	var results []*Pad
+	iterator.forEach(func(item *glib.Value) bool {
+		pad := new(Pad)
+
+		pad.SetPtr(item.GetObject().GetPtr())
+
+		results = append(results, pad)
+		return true
+	})
+
+	return results
 }
 
 //Utility function that elements can use in case they encountered a fatal data processing error.
